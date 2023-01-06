@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
+    <title>NoPaperAPI</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="rendererFiles.js" defer></script>
+  </head>
+  <body>
+    <div class="img_div">
+      <img src="../assets/images/logo.png" width="90px" height="60px" />
+      <div>
+        <h1 class="subtitle">Lista de documentos</h1>
+        <div class="field">
+          <label class="label">Registo do paciente</label>
+          <div class="control">
+            <input class="input" id="pacReg" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <table class="table is-fullwidth">
+        <thead>
+          <tr>
+            <th><abbr title="Número">#</abbr></th>
+            <th>Documento</th>
+            <th><abbr title="Tipo de Documento">Tipo</abbr></th>
+            <th>Excluir</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="tablet_email">
+      <button id="cancel" class="button is-medium">Cancelar</button>
+      <button id="confirmButton" class="button is-success is-medium">
+        Confirmar
+      </button>
+    </div>
+  </body>
+</html>

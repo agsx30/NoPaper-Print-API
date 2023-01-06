@@ -1,0 +1,39 @@
+body {
+  margin: auto;
+  max-width: 38rem;
+  padding: 2rem;
+}
+.img_div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7vh;
+}
+.img_div2 {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.tablet_email {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.radio + .radio {
+  margin-left: 0px;
+}
+.coluna {
+  display: flex;
+  flex-direction: column;
+}
+
+.inputZone {
+  width: 300px;
+}
+.table_div {
+  display: flex;
+  align-items: center;
+  margin: auto;
+}
+
+@import "https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css";

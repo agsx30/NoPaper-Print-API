@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'" />
+    <title>NoPaperAPI</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="renderer.js" defer></script>
+  </head>
+  <body>
+    <div class="img_div">
+      <img src="../assets/images/logo.png" width="90px" height="60px" />
+      <h1 id="nomeCliente" class="title is-4">Nome do cliente</h1>
+    </div>
+    <div class="box">
+      <h2 class="subtitle">Dados do Paciente</h2>
+      <div class="field">
+        <label class="label">CPF</label>
+        <div class="control">
+          <p class="input" id="cpf" aria-disabled="true">000-000-000-00</p>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Data de Nascimento</label>
+        <div class="control">
+          <p class="input" id="dob" aria-disabled="true">00/00/0000</p>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">E-mail</label>
+        <div class="control">
+          <p class="input" id="email" aria-disabled="true">email@email.com</p>
+        </div>
+      </div>
+      <div class="tablet_email">
+        <div class="control coluna">
+          <label class="radio">
+            <input id="emailBox" type="radio" name="radio" />
+            Enviar por e-mail
+          </label>
+          <label class="radio">
+            <input id="QRcodeBox" type="radio" name="radio" />
+            QRCode
+          </label>
+        </div>
+        <div class="field inputZone">
+          <label class="label">Tablet</label>
+          <div class="control">
+            <input class="input" id="tablet" value="Tablet1" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tablet_email">
+      <button id="cancel" class="button is-medium">Cancelar</button>
+      <button id="confirm" class="button is-success is-medium">
+        Confirmar
+      </button>
+    </div>
+  </body>
+</html>
