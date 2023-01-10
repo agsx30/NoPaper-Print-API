@@ -2,67 +2,31 @@ require("dotenv").config();
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog } = require("electron");
 const axios = require("axios");
 const fs = require("fs");
-var noPaperUrl = process.env.NOPAPER_URL;
-var docsUrl = noPaperUrl + "/api/cb_docs";
-var loginURL = noPaperUrl + "/api/auth/login";
-var recordURL = noPaperUrl + "/api/document-types";
-var userUrl = noPaperUrl + "/api/user";
 const path = require("path");
-const { app: express, server } = require("./server");
-const { getData } = require("./controller/pdfcontroller");
 const FormData = require("form-data");
 const qr = require("qrcode");
 const Store = require("electron-store");
-const appToken = "XNQIQRI1SVT";
 const sql = require("./db/dbconnect");
-var client = "Smart";
+
+const { app: express, server } = require("./server");
+const { getData } = require("./controller/pdfcontroller");
+const { login, index, loading } = require("./ui");
+
+const noPaperUrl = process.env.NOPAPER_URL;
+const docsUrl = noPaperUrl + "/api/cb_docs";
+const loginURL = noPaperUrl + "/api/auth/login";
+const recordURL = noPaperUrl + "/api/document-types";
+const userUrl = noPaperUrl + "/api/user";
+const appToken = "XNQIQRI1SVT";
 
 const store = new Store();
 var form = new FormData();
+
+var client = "Smart";
 var mainWindow;
 var tray;
 
-async function loading() {
-  mainWindow.webContents.removeAllListeners("did-finish-load");
-  mainWindow.setAlwaysOnTop(false);
-  mainWindow.hide();
-  setTimeout(() => {
-    mainWindow.loadFile(path.join(__dirname, "./views/loading.html"));
-    mainWindow.setSize(800, 300);
-    mainWindow.center();
-    mainWindow.show();
-  }, 300);
-}
-
-function index() {
-  mainWindow.webContents.removeAllListeners("did-finish-load");
-  mainWindow.setAlwaysOnTop(false);
-  mainWindow.hide();
-  store.set("files", []);
-  store.set("pacreg", null);
-  store.set("convenio", null);
-  setTimeout(() => {
-    mainWindow.loadFile(path.join(__dirname, "./views/index.html"));
-    mainWindow.setSize(800, 300);
-    mainWindow.center();
-    mainWindow.hide();
-  }, 300);
-}
-
-function login() {
-  mainWindow.setAlwaysOnTop(true);
-  setTimeout(() => {
-    mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
-    mainWindow.setSize(800, 500);
-    mainWindow.center();
-    mainWindow.show();
-    logoutButton = trayMenu.getMenuItemById("logout");
-    logoutButton.enabled = false;
-  }, 300);
-}
-
-function config() {
-  // Create the browser window.
+function setupMainWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 500,
@@ -80,10 +44,6 @@ function config() {
     },
   });
 
-  tray = new Tray(path.join(__dirname, "./assets/images/logo_quad.png"));
-
-  // and load the index.html of the app.
-
   mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
 
   mainWindow.on("minimize", function (event) {
@@ -92,7 +52,10 @@ function config() {
   });
 
   // mainWindow.webContents.openDevTools();
+}
 
+function setupTray() {
+  tray = new Tray(path.join(__dirname, "./assets/images/logo_quad.png"));
   trayMenu = Menu.buildFromTemplate([
     {
       label: "Abrir",
@@ -110,27 +73,32 @@ function config() {
     {
       label: "Logout",
       id: "logout",
-      click: async function () {
-        await loading();
-        store.set("login", null);
-        store.set("record", null);
-        store.set("user", null);
-        // store.get("files").map((current) => {
-        //   fs.unlinkSync(path.join(__dirname, `./file/${current.file}`));
-        // });
-        store.set("files", []);
-        login();
+      click: function () {
+        mainWindow.setSize(800, 500);
+        mainWindow.setPosition(50, 50);
+        mainWindow.setAlwaysOnTop(true);
+        mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
+        mainWindow.show();
+        logoutButton = trayMenu.getMenuItemById("logout");
+        logoutButton.enabled = false;
+        store.set("logged", false);
+        store.set("token", null);
       },
     },
   ]);
-
   tray.setContextMenu(trayMenu);
-
   tray.on("double-click", () => {
-    mainWindow.show();
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+    }
   });
+}
 
-  store.set("login", null);
+function config() {
+  setupMainWindow();
+  setupTray();
 }
 
 if (require("electron-squirrel-startup")) {
@@ -149,7 +117,7 @@ app.on("ready", async () => {
       mainWindow.hide();
       if (store.get("login")) {
         if (!store.get("files")) {
-          index();
+          index(mainWindow, store);
         }
       }
     }
@@ -175,11 +143,11 @@ app.on("ready", async () => {
 });
 
 ipcMain.on("index", () => {
-  index();
+  index(mainWindow, store);
 });
 
 ipcMain.on("returnLogin", () => {
-  login();
+  login(mainWindow, trayMenu);
 });
 
 ipcMain.on("fileDeleteButton", () => {
@@ -208,7 +176,7 @@ ipcMain.on("dialogError", (e, info) => {
 });
 
 ipcMain.on("login", async (e, data) => {
-  await loading();
+  await loading(mainWindow);
   store.set("files", []);
   try {
     var resLogin = await axios({
@@ -242,13 +210,14 @@ ipcMain.on("login", async (e, data) => {
               store.set("login", resLogin.data);
               store.set("record", resRecord.data);
               store.set("user", resUser.data);
-              index();
+              index(mainWindow, store);
               logoutButton = trayMenu.getMenuItemById("logout");
               logoutButton.enabled = true;
             }
           } catch (error) {
             dialog.showErrorBox("Erro", "Erro na configuração de usuário");
-            login();
+            console.log(error);
+            login(mainWindow, trayMenu);
           }
         }
       } catch (error) {
@@ -256,18 +225,18 @@ ipcMain.on("login", async (e, data) => {
           "Erro",
           "Erro na configuração de Tipos de Documentos"
         );
-        login();
+        login(mainWindow, trayMenu);
       }
     }
   } catch (error) {
     dialog.showErrorBox("Erro", "Login sem sucesso...");
-    login();
+    login(mainWindow, trayMenu);
   }
 });
 
 ipcMain.on("confirm", async (e, formIn) => {
   mainWindow.webContents.removeAllListeners("did-finish-load");
-  loading();
+  loading(mainWindow);
   var indexPage = false;
   var params = formIn.parms;
   var qrCodeLink;
@@ -330,10 +299,12 @@ ipcMain.on("confirm", async (e, formIn) => {
           );
         }
       });
+      index(mainWindow, store);
+      indexPage = true;
     }
   }
 
-  if (formIn.send_mail !== "true" && formIn.qrcode) {
+  if (formIn.send_mail !== "true" && formIn.qrcode && !indexPage) {
     console.log("entrou no if do qrcode");
 
     qr.toString(qrCodeLink, { type: "svg", width: 350 }, (err, svg) => {
@@ -354,7 +325,7 @@ ipcMain.on("confirm", async (e, formIn) => {
   }
   if (!indexPage) {
     console.log("Arquivo enviado com sucesso.");
-    index();
+    index(mainWindow, store);
   }
   // store.get("files").map((current) => {
   //   fs.unlink(path.join(__dirname, `./file/${current.file}`),()=>{
@@ -391,11 +362,11 @@ ipcMain.on("dbConnect", async (e, info) => {
           "Erro",
           "Paciente sem cadastro completo na base de dados."
         );
-        index();
+        index(mainWindow, store);
       }
     } else {
       dialog.showErrorBox("Erro", "Paciente não encontrado na base de dados.");
-      index();
+      index(mainWindow, store);
     }
   } catch (error) {
     console.error(error);
