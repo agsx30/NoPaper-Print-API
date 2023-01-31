@@ -35,5 +35,10 @@ body {
   align-items: center;
   margin: auto;
 }
+.dropdown-content {
+  max-height: 13em;
+  max-width: 14em;
+  overflow: auto;
+}
 
 @import "https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css";

@@ -59,6 +59,7 @@ QRCodeBox.addEventListener("click", () => {
 });
 
 ipcRenderer.on("form", (form) => {
+  console.log(form)
   email.disabled = false;
   emailCheckbox.disabled = false;
   formRender = form;

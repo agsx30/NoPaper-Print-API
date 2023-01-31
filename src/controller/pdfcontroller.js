@@ -1,9 +1,19 @@
 const fs = require("fs");
 const dicer = require("dicer");
 const sql = require("../db/dbconnect");
+const axios = require("axios");
+const path = require("path");
 
-function getData(req, res, webContents, store, client, index, dialog) {
+function getData(req, res, webContents, store, client, index, dialog, window) {
   var pacreg = null;
+
+  function filesView() {
+    window.loadFile(path.join(__dirname, "../views/files.html"));
+    window.setSize(800, 800);
+    window.center();
+    window.show();
+    window.webContents.removeAllListeners("did-finish-load");
+  }
 
   function b64DecodeUnicode(str) {
     // Going backwards: from bytestream, to percent-encoding, to original string.
@@ -15,6 +25,45 @@ function getData(req, res, webContents, store, client, index, dialog) {
         })
         .join("")
     );
+  }
+
+  async function getInfo() {
+    const stream = fs.createReadStream(
+      store.get("files")[store.get("files").length - 1].file
+    );
+
+    axios
+      .post(
+        "http://localhost:4500/getInfo",
+        stream,
+
+        {
+          headers: {
+            "Content-Type": "application/octet-stream",
+            recordArray: JSON.stringify({ record: store.get("record") }),
+          },
+        }
+      )
+      .then((response) => {
+        filesView();
+        if (response.data.type !== "") {
+          let files = store.get("files");
+          files[files.length - 1].filename =
+            response.data.type + files[files.length - 1].filename;
+          store.set("files", files);
+        }
+        webContents.on("did-finish-load", function formSender() {
+          webContents.send("files", {
+            files: store.get("files"),
+            records: store.get("record"),
+            pacreg: response.data.atd,
+            client,
+          });
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
 
   try {
@@ -41,33 +90,15 @@ function getData(req, res, webContents, store, client, index, dialog) {
         console.log("Nova impressão!");
         p.on("header", (header) => {
           filename = header["content-disposition"][0];
-
           if (filename.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)[1]) {
             filename = filename.match(
               /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
             )[1];
-            // if (
-            //   filename.replaceAll('"', "").replace(".pdf", "").match(/^\d+$/)
-            // ) {
-            //   filename = filename.replaceAll('"', "").replace(".pdf", "");
-            //   filename2 = filename;
-            // } else {
             filename = filename.replaceAll('"', "");
-            //   filename2 = filename;
             if (filename.includes("=?utf-8?B")) {
               filename = filename.slice(10, -2);
               filename = b64DecodeUnicode(filename);
-              // filename2 = filename;
             }
-            //   if (filename.split("-")[1] === undefined) {
-            //     return res.sendStatus(404);
-            //   } else {
-            //     filename = filename.split("-")[0];
-            //     if (!filename.match(/^\d+$/)) {
-            //       return res.sendStatus(404);
-            //     }
-            //   }
-            // }
           } else {
             return res.sendStatus(404);
           }
@@ -102,9 +133,17 @@ function getData(req, res, webContents, store, client, index, dialog) {
                 .match(/\d+\.\d+\.pdf$/)[0]
                 .split(".pdf")[0]
                 .split(".")[1];
-              pacreg = await sql.pacreg(osm1, osm2);
-              store.set("pacreg", pacreg.pacreg);
-              store.set("convenio", pacreg.convenio);
+              if ((pacreg = await sql.pacreg(osm1, osm2))) {
+                store.set("pacreg", pacreg.pacreg);
+                store.set("convenio", pacreg.convenio);
+                store.set("email_med", pacreg.email_med);
+              } else {
+                dialog.showErrorBox(
+                  "Erro",
+                  "Erro na consulta da Ordem de Servico na Base de Dados"
+                );
+                index(window, store);
+              }
             } else if (filename.match(/O\.S\. \d+\.\d+/)) {
               let osm1 = filename
                 .match(/O\.S\. \d+\.\d+/)[0]
@@ -115,22 +154,36 @@ function getData(req, res, webContents, store, client, index, dialog) {
                 .split("O.S. ")[1]
                 .split(".")[1];
 
-              pacreg = await sql.pacreg(osm1, osm2);
-              store.set("pacreg", pacreg.pacreg);
-              store.set("convenio", pacreg.convenio);
+              if ((pacreg = await sql.pacreg(osm1, osm2))) {
+                store.set("pacreg", pacreg.pacreg);
+                store.set("convenio", pacreg.convenio);
+                store.set("email_med", pacreg.email_med);
+              } else {
+                dialog.showErrorBox(
+                  "Erro",
+                  "Erro na consulta da Ordem de Servico na Base de Dados"
+                );
+                index(window, store);
+              }
             }
+            filesView();
             webContents.on("did-finish-load", function formSender() {
               webContents.send("files", {
                 files: store.get("files"),
                 records: store.get("record"),
                 pacreg: store.get("pacreg"),
+                client,
               });
             });
+          } else if (client === "Tasy") {
+            await getInfo();
           } else {
+            filesView();
             webContents.on("did-finish-load", function formSender() {
               webContents.send("files", {
                 files: store.get("files"),
                 records: store.get("record"),
+                client,
               });
             });
           }
@@ -140,7 +193,7 @@ function getData(req, res, webContents, store, client, index, dialog) {
             "Erro",
             "Erro na consulta da Ordem de Servico na Base de Dados"
           );
-          index();
+          index(window, store);
         }
       });
       req.pipe(d);
@@ -153,6 +206,199 @@ function getData(req, res, webContents, store, client, index, dialog) {
   }
 }
 
+function getData24(
+  req,
+  res,
+  webContents,
+  store,
+  client,
+  index,
+  dialog,
+  window
+) {
+  var filename = "";
+  var pacreg = null;
+
+  function b64DecodeUnicode(str) {
+    return decodeURIComponent(
+      atob(str)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+  }
+
+  function filesView() {
+    window.loadFile(path.join(__dirname, "../views/files.html"));
+    window.setSize(800, 800);
+    window.center();
+    window.show();
+    window.webContents.removeAllListeners("did-finish-load");
+  }
+
+  async function getInfo() {
+    const stream = fs.createReadStream(
+      store.get("files")[store.get("files").length - 1].file
+    );
+
+    axios
+      .post(
+        "http://localhost:4500/getInfo",
+        stream,
+
+        {
+          headers: {
+            "Content-Type": "application/octet-stream",
+            recordArray: JSON.stringify({ record: store.get("record") }),
+          },
+        }
+      )
+      .then((response) => {
+        filesView();
+        if (response.data.type !== "") {
+          let files = store.get("files");
+          files[files.length - 1].filename =
+            response.data.type + files[files.length - 1].filename;
+          store.set("files", files);
+        }
+        webContents.on("did-finish-load", function formSender() {
+          webContents.send("files", {
+            files: store.get("files"),
+            records: store.get("record"),
+            pacreg: response.data.atd,
+            client,
+          });
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+  filename = req.file.originalname;
+  filename = filename.slice(10, -2);
+  filename = b64DecodeUnicode(filename);
+
+  fs.writeFileSync(
+    "./" + store.get("files").length.toString() + ".pdf",
+    req.file.buffer
+  );
+
+  try {
+    var files = store.get("files");
+    files.push({
+      filename,
+      file: store.get("files").length.toString() + ".pdf",
+    });
+    store.set("files", files);
+    console.log("Arquivo montado e sendo enviado...");
+    res.status(201).location("/return").send();
+    if (client === "Smart") {
+      try {
+        if (filename.match(/\d+\.\d+\.pdf$/)) {
+          let osm1 = filename
+            .match(/\d+\.\d+\.pdf$/)[0]
+            .split(".pdf")[0]
+            .split(".")[0];
+          let osm2 = filename
+            .match(/\d+\.\d+\.pdf$/)[0]
+            .split(".pdf")[0]
+            .split(".")[1];
+
+          sql.pacreg(osm1, osm2).then((result) => {
+            if (result) {
+              filesView();
+              store.set("pacreg", result.pacreg);
+              store.set("convenio", result.convenio);
+              store.set("email_med", result.email_med);
+              webContents.on("did-finish-load", () => {
+                webContents.send("files", {
+                  files: store.get("files"),
+                  records: store.get("record"),
+                  pacreg: store.get("pacreg"),
+                  client,
+                });
+              });
+            } else {
+              dialog.showErrorBox(
+                "Erro",
+                "Erro na consulta da Ordem de Servico na Base de Dados"
+              );
+              index(window, store);
+            }
+          });
+        } else if (filename.match(/O\.S\. \d+\.\d+/)) {
+          let osm1 = filename
+            .match(/O\.S\. \d+\.\d+/)[0]
+            .split("O.S. ")[1]
+            .split(".")[0];
+          let osm2 = filename
+            .match(/O\.S\. \d+\.\d+/)[0]
+            .split("O.S. ")[1]
+            .split(".")[1];
+          sql.pacreg(osm1, osm2).then((result) => {
+            if (result) {
+              filesView();
+              store.set("pacreg", result.pacreg);
+              store.set("convenio", result.convenio);
+              store.set("email_med", result.email_med);
+              webContents.on("did-finish-load", () => {
+                webContents.send("files", {
+                  files: store.get("files"),
+                  records: store.get("record"),
+                  pacreg: store.get("pacreg"),
+                  client,
+                });
+              });
+            } else {
+              dialog.showErrorBox(
+                "Erro",
+                "Erro na consulta da Ordem de Servico na Base de Dados"
+              );
+              index(window, store);
+            }
+          });
+        } else {
+          filesView();
+          webContents.on("did-finish-load", () => {
+            webContents.send("files", {
+              files: store.get("files"),
+              records: store.get("record"),
+              pacreg: store.get("pacreg"),
+              client,
+            });
+          });
+        }
+      } catch (error) {
+        console.log(error);
+        dialog.showErrorBox(
+          "Erro",
+          "Erro na consulta da Ordem de Servico na Base de Dados"
+        );
+        index(window, store);
+      }
+    } else if (client === "Tasy") {
+      getInfo();
+    } else {
+      filesView();
+      webContents.on("did-finish-load", function formSender() {
+        webContents.send("files", {
+          files: store.get("files"),
+          records: store.get("record"),
+          client,
+        });
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    dialog.showErrorBox("Erro", "Erro no upload de arquivo");
+    index(window, store);
+  }
+}
+
 module.exports = {
-  getData: getData,
+  getData,
+  getData24,
 };

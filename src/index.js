@@ -6,11 +6,13 @@ const path = require("path");
 const FormData = require("form-data");
 const qr = require("qrcode");
 const Store = require("electron-store");
-const sql = require("./db/dbconnect");
+const db = require("./db/dbconnect");
+const multer = require("multer");
+const upload = multer();
 
 const { app: express, server } = require("./server");
-const { getData } = require("./controller/pdfcontroller");
-const { login, index, loading } = require("./ui");
+const { getData, getData24 } = require("./controller/pdfcontroller");
+const { login, index, loading, logout } = require("./ui");
 
 const noPaperUrl = process.env.NOPAPER_URL;
 const docsUrl = noPaperUrl + "/api/cb_docs";
@@ -22,7 +24,7 @@ const appToken = "XNQIQRI1SVT";
 const store = new Store();
 var form = new FormData();
 
-var client = "Smart";
+var client = process.env.CLIENT;
 var mainWindow;
 var tray;
 
@@ -74,15 +76,7 @@ function setupTray() {
       label: "Logout",
       id: "logout",
       click: function () {
-        mainWindow.setSize(800, 500);
-        mainWindow.setPosition(50, 50);
-        mainWindow.setAlwaysOnTop(true);
-        mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
-        mainWindow.show();
-        logoutButton = trayMenu.getMenuItemById("logout");
-        logoutButton.enabled = false;
-        store.set("logged", false);
-        store.set("token", null);
+        logout(mainWindow, trayMenu, store);
       },
     },
   ]);
@@ -99,6 +93,7 @@ function setupTray() {
 function config() {
   setupMainWindow();
   setupTray();
+  store.set("login", false);
 }
 
 if (require("electron-squirrel-startup")) {
@@ -129,16 +124,45 @@ app.on("ready", async () => {
 
   express.post("/pdf", (req, res) => {
     if (store.get("login")) {
-      getData(req, res, mainWindow.webContents, store, client, index, dialog);
-      mainWindow.loadFile(path.join(__dirname, "./views/files.html"));
-      mainWindow.setSize(800, 800);
-      mainWindow.center();
-      mainWindow.show();
-      mainWindow.webContents.removeAllListeners("did-finish-load");
+      getData(
+        req,
+        res,
+        mainWindow.webContents,
+        store,
+        client,
+        index,
+        dialog,
+        mainWindow
+      );
+      loading(mainWindow);
     } else {
       res.writeHead(404);
       res.end();
     }
+  });
+
+  express.post("/pdf24", upload.single("file"), (req, res) => {
+    mainWindow.webContents.removeAllListeners("did-finish-load");
+    if (store.get("login")) {
+      getData24(
+        req,
+        res,
+        mainWindow.webContents,
+        store,
+        client,
+        index,
+        dialog,
+        mainWindow
+      );
+      loading(mainWindow);
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  });
+
+  express.get("/return", (req, res) => {
+    res.send("<script>window.close();</script > ");
   });
 });
 
@@ -207,12 +231,37 @@ ipcMain.on("login", async (e, data) => {
               url: userUrl,
             });
             if (resUser.status === 200) {
-              store.set("login", resLogin.data);
-              store.set("record", resRecord.data);
-              store.set("user", resUser.data);
-              index(mainWindow, store);
-              logoutButton = trayMenu.getMenuItemById("logout");
-              logoutButton.enabled = true;
+              try {
+                res = await db.testDBConnection(client);
+                if (res === "ok") {
+                  store.set("login", resLogin.data);
+                  store.set("record", resRecord.data);
+                  store.set("user", resUser.data);
+                  index(mainWindow, store);
+                  logoutButton = trayMenu.getMenuItemById("logout");
+                  logoutButton.enabled = true;
+                  dialog.showMessageBox({
+                    message: "Conexão com o banco de dados feita com sucesso",
+                    buttons: ["OK"],
+                  });
+                } else {
+                  console.log(res.message);
+                  dialog.showMessageBox({
+                    message: res.message,
+                    buttons: ["OK"],
+                  });
+
+                  logout(mainWindow, trayMenu, store);
+                }
+              } catch (error) {
+                console.log(error.message);
+                dialog.showMessageBox({
+                  message: error.message,
+                  buttons: ["OK"],
+                });
+
+                logout(mainWindow, trayMenu, store);
+              }
             }
           } catch (error) {
             dialog.showErrorBox("Erro", "Erro na configuração de usuário");
@@ -240,8 +289,10 @@ ipcMain.on("confirm", async (e, formIn) => {
   var indexPage = false;
   var params = formIn.parms;
   var qrCodeLink;
-  params.data_nascimento = params.data_nascimento.toISOString().split("T")[0];
+
   params.convenio = store.get("convenio");
+  params.med_email = store.get("email_med");
+  console.log(params);
   for (let i = 0; i < formIn.files.length; i++) {
     form = new FormData();
     form.append("pdf", fs.createReadStream("./" + formIn.files[i].file), {
@@ -260,7 +311,7 @@ ipcMain.on("confirm", async (e, formIn) => {
         },
         method: "post",
         url: docsUrl,
-        // url: "https://webhook.site/f1fd5b2d-4546-4a87-8a35-604edfa96a6d",
+        // url: "https://webhook.site/e9a54c8d-c0fc-42cb-a17f-d66895967dbc",
         data: form,
       });
 
@@ -270,10 +321,6 @@ ipcMain.on("confirm", async (e, formIn) => {
         if (resposta.data.link) {
           qrCodeLink = resposta.data.link;
         }
-      } else if (resposta.status === 403) {
-        console.log(resposta.data[0]);
-        console.log(resposta.status);
-        dialog.showErrorBox("Erro", "Erro no envio do arquivo");
       }
     } catch (error) {
       Object.keys(error.response.data).forEach((item) => {
@@ -342,31 +389,69 @@ ipcMain.on("filesDelete", (e, files) => {
 ipcMain.on("dbConnect", async (e, info) => {
   let formForData = info;
   try {
-    if ((formForData.parms = await sql.getdata(formForData.pacReg))) {
-      formForData.parms = await sql.getdata(formForData.pacReg);
-      if (
-        formForData.parms.cpf &&
-        formForData.parms.data_nascimento &&
-        formForData.parms.nome
-      ) {
-        formForData.channel_name = process.env.CHANNEL_NAME;
-        mainWindow.webContents.on("did-finish-load", function formSender() {
-          mainWindow.webContents.send("form", formForData);
-        });
-        mainWindow.loadFile(path.join(__dirname, "./views/data.html"));
-        mainWindow.setSize(800, 750);
-        mainWindow.center();
-        mainWindow.show();
+    if (client === "Smart") {
+      if ((formForData.parms = await db.getdata(formForData.pacReg))) {
+        if (
+          formForData.parms.cpf &&
+          formForData.parms.data_nascimento &&
+          formForData.parms.nome
+        ) {
+          formForData.channel_name = process.env.CHANNEL_NAME;
+          mainWindow.webContents.on("did-finish-load", function formSender() {
+            mainWindow.webContents.send("form", formForData);
+          });
+          mainWindow.loadFile(path.join(__dirname, "./views/data.html"));
+          mainWindow.setSize(800, 750);
+          mainWindow.center();
+          mainWindow.show();
+        } else {
+          dialog.showErrorBox(
+            "Erro",
+            "Paciente sem cadastro completo na base de dados."
+          );
+          index(mainWindow, store);
+        }
       } else {
         dialog.showErrorBox(
           "Erro",
-          "Paciente sem cadastro completo na base de dados."
+          "Paciente não encontrado na base de dados."
         );
         index(mainWindow, store);
       }
-    } else {
-      dialog.showErrorBox("Erro", "Paciente não encontrado na base de dados.");
-      index(mainWindow, store);
+    } else if (client === "Tasy") {
+      if (
+        (formForData.parms = await db.getData_tasy(formForData.pacReg, store))
+      ) {
+        if (
+          formForData.parms.cpf &&
+          formForData.parms.data_nascimento &&
+          formForData.parms.nome
+        ) {
+          formForData.channel_name = process.env.CHANNEL_NAME;
+          mainWindow.webContents.on("did-finish-load", function formSender() {
+            mainWindow.webContents.send("form", formForData);
+          });
+          mainWindow.loadFile(path.join(__dirname, "./views/data.html"));
+          mainWindow.setSize(800, 750);
+          mainWindow.center();
+          mainWindow.show();
+        } else {
+          dialog.showErrorBox(
+            "Erro",
+            "Paciente sem cadastro completo na base de dados."
+          );
+          index(mainWindow, store);
+        }
+      } else {
+        mainWindow.webContents.on("did-finish-load", function formSender() {
+          mainWindow.webContents.send("erroform", store.get("formerror"));
+        });
+        // dialog.showErrorBox(
+        //   "Erro",
+        //   "Paciente não encontrado na base de dados."
+        // );
+        // index(mainWindow, store);
+      }
     }
   } catch (error) {
     console.error(error);
@@ -386,9 +471,10 @@ app.on("window-all-closed", () => {
 });
 
 app.on("quit", () => {
-  store.set("login", null);
+  store.set("login", false);
   store.set("record", null);
   store.set("user", null);
+  store.set("convenio", null);
   // store.get("files").map((current) => {
   //   fs.unlinkSync(path.join(__dirname, `./file/${current.file}`));
   // });

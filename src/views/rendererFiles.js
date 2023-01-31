@@ -2,11 +2,15 @@ const tableBody = document.querySelector("#tableBody");
 const confirmButton = document.querySelector("#confirmButton");
 const cancelButton = document.querySelector("#cancel");
 const pacReg = document.querySelector("#pacReg");
+const registry = document.querySelector("#registry");
 
 var files;
 
 ipcRenderer.on("files", (info) => {
   files = info.files;
+  if(info.client==='Tasy'){
+registry.innerHTML = 'Número do Atendimento'
+  }
   for (let i = 0; i < files.length; i++) {
     tableBody.insertAdjacentHTML(
       "beforeBegin",
@@ -14,16 +18,19 @@ ipcRenderer.on("files", (info) => {
         files[i].file.split(".pdf")[0]
       }">
       <th>${Number(info.files[i].file.split(".pdf")[0]) + 1}</th>
-      <td>${info.files[i].filename}</td>
-      <td><div class="control">
-          <div  class="dropdown is-up dropdownActivation">
-            <div class="dropdown-trigger">
+      <td style="overflow: hidden;text-overflow: ellipsis">${
+        info.files[i].filename
+      }</td>
+      <td style="width:100%">
+          <div style="width:100%" class="dropdown is-up dropdownActivation">
+            <div style="width:100%" class="dropdown-trigger">
               <button
                 class="button"
                 aria-haspopup="true"
                 aria-controls="dropdown-menu"
+                style="width:100%"
               >
-                <span class="docType${i}" >Escolha</span>
+                <span style="overflow: hidden;text-overflow: ellipsis" class="docType${i}" >Escolha</span>
                 </span>
               </button>
             </div>

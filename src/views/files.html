@@ -18,7 +18,7 @@
       <div>
         <h1 class="subtitle">Lista de documentos</h1>
         <div class="field">
-          <label class="label">Registo do paciente</label>
+          <label id="registry" class="label">Registo do paciente</label>
           <div class="control">
             <input class="input" id="pacReg" />
           </div>
@@ -26,13 +26,18 @@
       </div>
     </div>
     <div class="box">
-      <table class="table is-fullwidth">
+      <table
+        class="table is-fullwidth"
+        style="table-layout: fixed; width: 100%"
+      >
         <thead>
           <tr>
-            <th><abbr title="Número">#</abbr></th>
-            <th>Documento</th>
-            <th><abbr title="Tipo de Documento">Tipo</abbr></th>
-            <th>Excluir</th>
+            <th style="width: 5%"><abbr title="Número">#</abbr></th>
+            <th style="width: 55%">Documento</th>
+            <th style="width: 25%">
+              <abbr title="Tipo de Documento">Tipo</abbr>
+            </th>
+            <th style="width: 15%">Excluir</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
