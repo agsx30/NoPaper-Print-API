@@ -4,12 +4,10 @@ function loading(window) {
   window.webContents.removeAllListeners("did-finish-load");
   window.setAlwaysOnTop(true);
   window.hide();
-  setTimeout(() => {
-    window.loadFile(path.join(__dirname, "../views/loading.html"));
-    window.setSize(800, 300);
-    window.center();
-    window.show();
-  }, 300);
+  window.loadFile(path.join(__dirname, "../views/loading.html"));
+  window.setSize(800, 300);
+  window.center();
+  window.show();
 }
 function index(window, store) {
   window.webContents.removeAllListeners("did-finish-load");

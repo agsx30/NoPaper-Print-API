@@ -77,6 +77,7 @@ async function getData_tasy(cd, store) {
       `SELECT CD_PESSOA_FISICA,DS_CONVENIO,DT_NASCIMENTO,EMAIL,NM_PACIENTE,NR_CPF_RESP,NR_CPF FROM ATENDIMENTO_PACIENTE_NP WHERE NR_ATENDIMENTO = ${cd}`
     );
 
+    console.log(res);
     let response = {};
     response.nome = res.rows[0][4].trim();
     // var dateArr = res.rows[0][2].split("-");

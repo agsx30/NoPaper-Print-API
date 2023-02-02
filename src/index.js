@@ -122,43 +122,67 @@ app.on("ready", async () => {
 
   server.listen(express.get("port"));
 
-  express.post("/pdf", (req, res) => {
-    if (store.get("login")) {
-      getData(
-        req,
-        res,
-        mainWindow.webContents,
-        store,
-        client,
-        index,
-        dialog,
-        mainWindow
-      );
-      loading(mainWindow);
-    } else {
-      res.writeHead(404);
-      res.end();
+  let queue = [];
+  let running = false;
+
+  async function executeQueue() {
+    while (queue.length > 0) {
+      running = true;
+      const next = queue.shift();
+      await next();
+      running = false;
     }
+  }
+
+  async function addToQueue(fn) {
+    queue.push(fn);
+    if (!running) {
+      await executeQueue();
+    }
+  }
+
+  express.post("/pdf", async (req, res) => {
+    await addToQueue(() => {
+      if (store.get("login")) {
+        loading(mainWindow);
+        mainWindow.webContents.removeAllListeners("did-finish-load");
+        getData(
+          req,
+          res,
+          mainWindow.webContents,
+          store,
+          client,
+          index,
+          dialog,
+          mainWindow
+        );
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
   });
 
-  express.post("/pdf24", upload.single("file"), (req, res) => {
-    mainWindow.webContents.removeAllListeners("did-finish-load");
-    if (store.get("login")) {
-      getData24(
-        req,
-        res,
-        mainWindow.webContents,
-        store,
-        client,
-        index,
-        dialog,
-        mainWindow
-      );
+  express.post("/pdf24", upload.single("file"), async (req, res) => {
+    await addToQueue(() => {
       loading(mainWindow);
-    } else {
-      res.writeHead(404);
-      res.end();
-    }
+      mainWindow.webContents.removeAllListeners("did-finish-load");
+      if (store.get("login")) {
+        getData24(
+          req,
+          res,
+          mainWindow.webContents,
+          store,
+          client,
+          index,
+          dialog,
+          mainWindow
+        );
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
   });
 
   express.get("/return", (req, res) => {
@@ -207,7 +231,6 @@ ipcMain.on("login", async (e, data) => {
       headers: { "X-APP-TOKEN": appToken, "Content-type": "application/json" },
       method: "post",
       url: loginURL,
-      // url: "http://localhost:3000/teste",
       data: { email: data.login, password: data.pass },
     });
     if (resLogin.status === 200) {

@@ -6,6 +6,8 @@ const path = require("path");
 
 function getData(req, res, webContents, store, client, index, dialog, window) {
   var pacreg = null;
+  var type = "";
+  var num = 0;
 
   function filesView() {
     window.loadFile(path.join(__dirname, "../views/files.html"));
@@ -48,8 +50,7 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
         filesView();
         if (response.data.type !== "") {
           let files = store.get("files");
-          files[files.length - 1].filename =
-            response.data.type + files[files.length - 1].filename;
+          files[num].filename = response.data.type + type;
           store.set("files", files);
         }
         webContents.on("did-finish-load", function formSender() {
@@ -115,6 +116,8 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
       d.on("finish", async () => {
         try {
           var files = store.get("files");
+          type = filename;
+          num = store.get("files").length;
           files.push({
             filename,
             file: store.get("files").length.toString() + ".pdf",
@@ -158,6 +161,7 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
                 store.set("pacreg", pacreg.pacreg);
                 store.set("convenio", pacreg.convenio);
                 store.set("email_med", pacreg.email_med);
+             
               } else {
                 dialog.showErrorBox(
                   "Erro",
@@ -218,7 +222,8 @@ function getData24(
 ) {
   var filename = "";
   var pacreg = null;
-
+  var type = "";
+  var num = 0;
   function b64DecodeUnicode(str) {
     return decodeURIComponent(
       atob(str)
@@ -259,8 +264,7 @@ function getData24(
         filesView();
         if (response.data.type !== "") {
           let files = store.get("files");
-          files[files.length - 1].filename =
-            response.data.type + files[files.length - 1].filename;
+          files[num].filename = response.data.type + type;
           store.set("files", files);
         }
         webContents.on("did-finish-load", function formSender() {
@@ -288,10 +292,13 @@ function getData24(
 
   try {
     var files = store.get("files");
+    type = filename;
+    num = store.get("files").length;
     files.push({
       filename,
       file: store.get("files").length.toString() + ".pdf",
     });
+
     store.set("files", files);
     console.log("Arquivo montado e sendo enviado...");
     res.status(201).location("/return").send();
