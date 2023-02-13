@@ -9,5 +9,6 @@ cancelLogin.addEventListener("click", () => {
 });
 
 loginButton.addEventListener("click", () => {
+  localStorage.removeItem("forms");
   ipcRenderer.send("login", { login: login.value, pass: pass.value });
 });

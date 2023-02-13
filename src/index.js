@@ -19,6 +19,8 @@ const docsUrl = noPaperUrl + "/api/cb_docs";
 const loginURL = noPaperUrl + "/api/auth/login";
 const recordURL = noPaperUrl + "/api/document-types";
 const userUrl = noPaperUrl + "/api/user";
+const formsUrl = noPaperUrl + "/api/cb_custom_forms";
+
 const appToken = "XNQIQRI1SVT";
 
 const store = new Store();
@@ -263,10 +265,6 @@ ipcMain.on("login", async (e, data) => {
                   index(mainWindow, store);
                   logoutButton = trayMenu.getMenuItemById("logout");
                   logoutButton.enabled = true;
-                  dialog.showMessageBox({
-                    message: "Conexão com o banco de dados feita com sucesso",
-                    buttons: ["OK"],
-                  });
                 } else {
                   console.log(res.message);
                   dialog.showMessageBox({
@@ -316,6 +314,32 @@ ipcMain.on("confirm", async (e, formIn) => {
   params.convenio = store.get("convenio");
   params.med_email = store.get("email_med");
   console.log(params);
+
+  if (formIn.forms) {
+    form = new FormData();
+    form.append("custom_forms", JSON.stringify(formIn.forms));
+    form.append("send_mail", formIn.send_mail);
+    form.append("parms", JSON.stringify(params));
+    form.append("id_user", store.get("user").id);
+    form.append("channel_name", formIn.channel_name);
+    try {
+      let resposta = await axios({
+        headers: {
+          "X-APP-TOKEN": appToken,
+          Authorization: "Bearer " + store.get("login").access_token,
+        },
+        method: "post",
+        // url: formsUrl,
+        url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
+        data: form,
+      });
+
+      console.log("Resposta do servidor : " + resposta.status + ".");
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   for (let i = 0; i < formIn.files.length; i++) {
     form = new FormData();
     form.append("pdf", fs.createReadStream("./" + formIn.files[i].file), {
@@ -333,8 +357,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        url: docsUrl,
-        // url: "https://webhook.site/e9a54c8d-c0fc-42cb-a17f-d66895967dbc",
+        // url: docsUrl,
+        url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
         data: form,
       });
 
@@ -346,6 +370,7 @@ ipcMain.on("confirm", async (e, formIn) => {
         }
       }
     } catch (error) {
+      // console.log(error);
       Object.keys(error.response.data).forEach((item) => {
         if (item === "pdf") {
           dialog.showErrorBox(

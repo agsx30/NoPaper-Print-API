@@ -10,8 +10,9 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
   var num = 0;
 
   function filesView() {
+    window.setAlwaysOnTop(false);
     window.loadFile(path.join(__dirname, "../views/files.html"));
-    window.setSize(800, 800);
+    window.setSize(800, 950);
     window.center();
     window.show();
     window.webContents.removeAllListeners("did-finish-load");
@@ -161,7 +162,6 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
                 store.set("pacreg", pacreg.pacreg);
                 store.set("convenio", pacreg.convenio);
                 store.set("email_med", pacreg.email_med);
-             
               } else {
                 dialog.showErrorBox(
                   "Erro",
