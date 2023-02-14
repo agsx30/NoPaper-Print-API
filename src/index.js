@@ -329,8 +329,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        // url: formsUrl,
-        url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
+        url: formsUrl,
+        // url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
         data: form,
       });
 
@@ -357,8 +357,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        // url: docsUrl,
-        url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
+        url: docsUrl,
+        // url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
         data: form,
       });
 

@@ -7,6 +7,9 @@ const configTransduson = {
     trustedconnection: true,
     enableArithAbort: true,
     trustServerCertificate: true,
+    cryptoCredentialsDetails: {
+      minVersion: 'TLSv1'
+  }
   },
   port: parseInt(process.env.SQL_PORT, 10),
 };
