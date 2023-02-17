@@ -8,6 +8,7 @@ app.set("port", port);
 
 process.on("uncaughtException", (err) => {
   console.error(`there was an uncaught error: ${err}`);
+  server.emit("error", err);
   process.exit;
 });
 

@@ -145,7 +145,7 @@ if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
-app.on("ready", async () => {
+app.on("ready", () => {
   autoUpdater.checkForUpdates();
   config();
   logoutButton = trayMenu.getMenuItemById("logout");
@@ -165,14 +165,13 @@ app.on("ready", async () => {
 
     return false;
   });
-  try {
-    server.listen(express.get("port"));
-  } catch (error) {
-    dialog.showMessageBox({
-      message: error.message,
-      buttons: ["OK"],
-    });
-  }
+
+  server.listen(express.get("port"));
+
+  server.on("error", () => {
+    app.isQuiting = true;
+    app.quit();
+  });
 
   let queue = [];
   let running = false;
@@ -575,6 +574,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("quit", () => {
+  console.log("kitou");
   store.set("login", false);
   store.set("record", null);
   store.set("user", null);
@@ -583,6 +583,5 @@ app.on("quit", () => {
   //   fs.unlinkSync(path.join(__dirname, `./file/${current.file}`));
   // });
   store.set("files", []);
-
   server.close();
 });
