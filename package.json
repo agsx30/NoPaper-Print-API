@@ -1,7 +1,7 @@
 {
   "name": "no-paper-api",
   "productName": "NoPaper Print API",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "NoPaper API bridge between print and NoPaper System",
   "main": "src/index.js",
   "dir": "src/index.js",
@@ -11,7 +11,7 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "build-installer": "electron-builder",
-    "build-packager": "electron-packager . ISS-Live-Locator --platform=win32 --arch=x64 --electronVersion=22.1.0"
+    "build-packager": "electron-packager . NoPaperAPI --platform=win32 --arch=x64 --electronVersion=22.1.0"
   },
   "build": {
     "appId": "NoPaper Print API",
@@ -21,7 +21,15 @@
         "nsis"
       ],
       "icon": "src/assets/images/logo.png",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "requireAdministrator",
+      "publish": [
+        {
+          "provider": "github",
+          "owner": "vitor93gs",
+          "repo": "NoPaperPrintAPIUpdater",
+          "releaseType": "release"
+        }
+      ]
     },
     "nsis": {
       "uninstallDisplayName": "NoPaper Print API",
@@ -40,6 +48,7 @@
     "dotenv": "^16.0.3",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.1.0",
+    "electron-updater": "^5.3.0",
     "express": "^4.18.2",
     "mssql": "^9.0.1",
     "multer": "^1.4.5-lts.1",
