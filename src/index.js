@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
 const qr = require("qrcode");
+const { autoUpdater } = require("electron-updater");
 const Store = require("electron-store");
 const db = require("./db/dbconnect");
 const multer = require("multer");
@@ -23,6 +24,47 @@ const userUrl = noPaperUrl + "/api/user";
 const formsUrl = noPaperUrl + "/api/cb_custom_forms";
 
 const appToken = "XNQIQRI1SVT";
+
+autoUpdater.setFeedURL({
+  provider: "github",
+  owner: "vitor93gs",
+  repo: "NoPaperPrintAPIUpdater",
+  releaseType: "release",
+});
+
+autoUpdater.on("update-available", () => {
+  dialog.showMessageBox(
+    {
+      type: "question",
+      buttons: ["Install", "Later"],
+      defaultId: 0,
+      message:
+        "Uma nova versão do aplicativo está disponível, gostaria de baixar agora?",
+    },
+    (response) => {
+      if (response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    }
+  );
+});
+
+autoUpdater.on("update-downloaded", () => {
+  dialog.showMessageBox(
+    {
+      type: "question",
+      buttons: ["Install", "Later"],
+      defaultId: 0,
+      message:
+        "A nova versão do aplicativo foi baixada, gostaria de atualizar agora?",
+    },
+    (response) => {
+      if (response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    }
+  );
+});
 
 const store = new Store();
 var form = new FormData();
@@ -104,6 +146,7 @@ if (require("electron-squirrel-startup")) {
 }
 
 app.on("ready", async () => {
+  autoUpdater.checkForUpdates();
   config();
   logoutButton = trayMenu.getMenuItemById("logout");
   logoutButton.enabled = false;
