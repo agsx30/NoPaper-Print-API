@@ -1,4 +1,5 @@
 require("dotenv").config();
+const https = require("https");
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog } = require("electron");
 const axios = require("axios");
 const fs = require("fs");
@@ -121,8 +122,14 @@ app.on("ready", async () => {
 
     return false;
   });
-
-  server.listen(express.get("port"));
+  try {
+    server.listen(express.get("port"));
+  } catch (error) {
+    dialog.showMessageBox({
+      message: error.message,
+      buttons: ["OK"],
+    });
+  }
 
   let queue = [];
   let running = false;
@@ -235,6 +242,7 @@ ipcMain.on("login", async (e, data) => {
       url: loginURL,
       data: { email: data.login, password: data.pass },
     });
+
     if (resLogin.status === 200) {
       try {
         let resRecord = await axios({
@@ -260,7 +268,12 @@ ipcMain.on("login", async (e, data) => {
                 res = await db.testDBConnection(client);
                 if (res === "ok") {
                   store.set("login", resLogin.data);
-                  store.set("record", resRecord.data);
+                  store.set(
+                    "record",
+                    resRecord.data.filter(
+                      (obj) => obj.reception_integration === 1
+                    )
+                  );
                   store.set("user", resUser.data);
                   index(mainWindow, store);
                   logoutButton = trayMenu.getMenuItemById("logout");

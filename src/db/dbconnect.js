@@ -9,7 +9,7 @@ async function getdata(PAC_REG) {
     let res = await pool
       .request()
       .query(
-        `SELECT PAC_NOME, PAC_NASC, PAC_NUMCPF, PAC_IND_CPF_PROPRIO, PAC_EMAIL FROM pac where PAC_REG = ${PAC_REG}`
+        `SELECT TOP 1 PAC_NOME, PAC_NASC, PAC_NUMCPF, PAC_IND_CPF_PROPRIO, PAC_EMAIL FROM pac where PAC_REG = ${PAC_REG}`
       );
 
     let response = {};
@@ -38,19 +38,19 @@ async function pacreg(osm1, osm2) {
     let res = await pool
       .request()
       .query(
-        `SELECT OSM_PAC, OSM_CNV FROM osm WHERE OSM_SERIE = ${osm1} and OSM_NUM = ${osm2}`
+        `SELECT TOP 1 OSM_PAC, OSM_CNV FROM osm WHERE OSM_SERIE = ${osm1} and OSM_NUM = ${osm2}`
       );
 
     let res2 = await pool
       .request()
       .query(
-        `SELECT CNV_NOME FROM cnv WHERE CNV_COD = '${res.recordsets[0][0].OSM_CNV}'`
+        `SELECT TOP 1 CNV_NOME FROM cnv WHERE CNV_COD = '${res.recordsets[0][0].OSM_CNV}'`
       );
 
     let res3 = await pool.request().query(
-      `SELECT PSV.PSV_EMAIL
-      FROM SMM
-      INNER JOIN PSV ON SMM.SMM_MED = PSV.PSV_COD
+      `SELECT TOP 1 PSV.PSV_EMAIL 
+      FROM SMM 
+      INNER JOIN PSV ON SMM.SMM_MED = PSV.PSV_COD 
       WHERE SMM.SMM_OSM_SERIE = ${osm1} AND SMM.SMM_OSM = ${osm2}`
     );
 
@@ -74,7 +74,7 @@ async function getData_tasy(cd, store) {
     console.log("Conexão bem sucedida!");
 
     let res = await connection.execute(
-      `SELECT CD_PESSOA_FISICA,DS_CONVENIO,DT_NASCIMENTO,EMAIL,NM_PACIENTE,NR_CPF_RESP,NR_CPF FROM ATENDIMENTO_PACIENTE_NP WHERE NR_ATENDIMENTO = ${cd}`
+      `SELECT TOP 1 CD_PESSOA_FISICA,DS_CONVENIO,DT_NASCIMENTO,EMAIL,NM_PACIENTE,NR_CPF_RESP,NR_CPF FROM ATENDIMENTO_PACIENTE_NP WHERE NR_ATENDIMENTO = ${cd}`
     );
 
     console.log(res);

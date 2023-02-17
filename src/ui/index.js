@@ -2,13 +2,14 @@ const path = require("path");
 
 function loading(window) {
   window.webContents.removeAllListeners("did-finish-load");
-  window.setAlwaysOnTop(true);
+  window.setAlwaysOnTop(false);
   window.hide();
   window.loadFile(path.join(__dirname, "../views/loading.html"));
   window.setSize(800, 300);
   window.center();
   window.show();
 }
+
 function index(window, store) {
   window.webContents.removeAllListeners("did-finish-load");
   window.setAlwaysOnTop(false);

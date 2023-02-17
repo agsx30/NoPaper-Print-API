@@ -10,7 +10,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "build-installer": "electron-builder"
+    "build-installer": "electron-builder",
+    "build-packager": "electron-packager . ISS-Live-Locator --platform=win32 --arch=x64 --electronVersion=22.1.0"
   },
   "build": {
     "appId": "NoPaper Print API",
