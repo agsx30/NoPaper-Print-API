@@ -2,7 +2,6 @@ const path = require("path");
 
 function loading(window) {
   window.webContents.removeAllListeners("did-finish-load");
-  window.setAlwaysOnTop(false);
   window.hide();
   window.loadFile(path.join(__dirname, "../views/loading.html"));
   window.setSize(800, 300);
@@ -12,7 +11,6 @@ function loading(window) {
 
 function index(window, store) {
   window.webContents.removeAllListeners("did-finish-load");
-  window.setAlwaysOnTop(false);
   window.hide();
   store.set("files", []);
   store.set("pacreg", null);
@@ -28,7 +26,6 @@ function index(window, store) {
 function logout(mainWindow, trayMenu, store) {
   mainWindow.setSize(800, 500);
   mainWindow.setPosition(50, 50);
-  mainWindow.setAlwaysOnTop(true);
   mainWindow.loadFile(path.join(__dirname, "../views/login.html"));
   mainWindow.show();
   var logoutButton = trayMenu.getMenuItemById("logout");
@@ -39,7 +36,6 @@ function logout(mainWindow, trayMenu, store) {
 }
 
 function login(window, trayMenu) {
-  window.setAlwaysOnTop(true);
   setTimeout(() => {
     window.loadFile(path.join(__dirname, "../views/login.html"));
     window.setSize(800, 500);

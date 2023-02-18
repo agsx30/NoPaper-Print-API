@@ -13,23 +13,20 @@
     "build-installer": "electron-builder",
     "build-packager": "electron-packager . NoPaperAPI --platform=win32 --arch=x64 --electronVersion=22.1.0"
   },
+  "repository": "https://github.com/vitor93gs/NoPaperAPIUpdater",
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
   "build": {
-    "appId": "NoPaper Print API",
+    "appId": "com.nopaper.printapi",
     "productName": "NoPaper Print API",
     "win": {
       "target": [
         "nsis"
       ],
       "icon": "src/assets/images/logo.png",
-      "requestedExecutionLevel": "requireAdministrator",
-      "publish": [
-        {
-          "provider": "github",
-          "owner": "vitor93gs",
-          "repo": "NoPaperPrintAPIUpdater",
-          "releaseType": "release"
-        }
-      ]
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "uninstallDisplayName": "NoPaper Print API",

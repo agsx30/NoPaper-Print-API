@@ -1,16 +1,15 @@
 require("dotenv").config();
-const https = require("https");
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog } = require("electron");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
 const qr = require("qrcode");
-const { autoUpdater } = require("electron-updater");
 const Store = require("electron-store");
 const db = require("./db/dbconnect");
 const multer = require("multer");
 const upload = multer();
+const { autoUpdater, AppUpdater } = require("electron-updater");
 
 const { app: express, server } = require("./server");
 const { getData, getData24 } = require("./controller/pdfcontroller");
@@ -25,59 +24,22 @@ const formsUrl = noPaperUrl + "/api/cb_custom_forms";
 
 const appToken = "XNQIQRI1SVT";
 
-autoUpdater.setFeedURL({
-  provider: "github",
-  owner: "vitor93gs",
-  repo: "NoPaperPrintAPIUpdater",
-  releaseType: "release",
-});
-
-autoUpdater.on("update-available", () => {
-  dialog.showMessageBox(
-    {
-      type: "question",
-      buttons: ["Install", "Later"],
-      defaultId: 0,
-      message:
-        "Uma nova versão do aplicativo está disponível, gostaria de baixar agora?",
-    },
-    (response) => {
-      if (response === 0) {
-        autoUpdater.downloadUpdate();
-      }
-    }
-  );
-});
-
-autoUpdater.on("update-downloaded", () => {
-  dialog.showMessageBox(
-    {
-      type: "question",
-      buttons: ["Install", "Later"],
-      defaultId: 0,
-      message:
-        "A nova versão do aplicativo foi baixada, gostaria de atualizar agora?",
-    },
-    (response) => {
-      if (response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    }
-  );
-});
-
 const store = new Store();
 var form = new FormData();
+const gotTheLock = app.requestSingleInstanceLock();
 
 var client = process.env.CLIENT;
 var mainWindow;
 var tray;
 
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.autoRunAppAfterInstall = true;
+
 function setupMainWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 500,
-    alwaysOnTop: true,
     simpleFullscreen: true,
     show: true,
     autoHideMenuBar: true,
@@ -90,6 +52,8 @@ function setupMainWindow() {
       preload: path.join(__dirname, "preload.js"),
     },
   });
+
+  mainWindow.setTitle(`NoPaper API v${app.getVersion()}`);
 
   mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
 
@@ -145,6 +109,18 @@ if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.on("ready", () => {
   autoUpdater.checkForUpdates();
   config();
@@ -167,11 +143,6 @@ app.on("ready", () => {
   });
 
   server.listen(express.get("port"));
-
-  server.on("error", () => {
-    app.isQuiting = true;
-    app.quit();
-  });
 
   let queue = [];
   let running = false;
@@ -239,6 +210,36 @@ app.on("ready", () => {
   express.get("/return", (req, res) => {
     res.send("<script>window.close();</script > ");
   });
+});
+
+autoUpdater.on("update-available", () => {
+  const response = dialog.showMessageBoxSync({
+    type: "question",
+    buttons: ["Baixar", "Agora não"],
+    defaultId: 0,
+    message:
+      "Uma nova versão do aplicativo está disponível, gostaria de baixar agora?",
+  });
+
+  if (response === 0) {
+    autoUpdater.downloadUpdate();
+  }
+});
+
+autoUpdater.on("update-downloaded", () => {
+  const response = dialog.showMessageBoxSync({
+    type: "question",
+    buttons: ["Atualizar"],
+    defaultId: 0,
+    message: "Seu aplicativo será atualizado agora.",
+  });
+  if (response === 0) {
+    autoUpdater.quitAndInstall();
+  }
+});
+
+autoUpdater.on("error", (error) => {
+  dialog.showMessageBox(mainWindow, error);
 });
 
 ipcMain.on("index", () => {
@@ -574,7 +575,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("quit", () => {
-  console.log("kitou");
   store.set("login", false);
   store.set("record", null);
   store.set("user", null);
