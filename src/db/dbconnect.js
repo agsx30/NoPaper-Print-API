@@ -1,6 +1,9 @@
 const { config, configTasy } = require("./dbconfig");
 const sql = require("mssql");
 const oracledb = require("oracledb");
+const axios = require("axios");
+const endpoint = process.env.SALUX_ENDPOINT;
+const jwt = require("jsonwebtoken");
 
 async function getdata(PAC_REG) {
   try {
@@ -103,7 +106,7 @@ async function getData_tasy(cd, store) {
   }
 }
 
-async function testDBConnection(client) {
+async function testDBConnection(client, store) {
   if (client === "Tasy") {
     try {
       const connection = await oracledb.getConnection(configTasy);
@@ -124,11 +127,76 @@ async function testDBConnection(client) {
       return error;
     }
   }
+  if (client === "Salux") {
+    try {
+      const response = await axios.post(
+        endpoint + "autenticacao/login/funcionario",
+        {
+          login: "NOPAPER",
+          password: "acc5NSSIZEX92LQbhGEs",
+        }
+      );
+
+      const token = response.data.JwtToken.Value;
+      console.log(token);
+      const decodedToken = jwt.decode(token, { complete: true });
+
+      if (!decodedToken) {
+        console.log("Invalid token");
+      } else {
+        const expirationTime = decodedToken.payload.exp;
+        const currentTime = Math.floor(Date.now() / 1000); // convert to seconds
+        if (expirationTime < currentTime) {
+          console.log("Token expirada");
+        } else {
+          console.log("Nova Token guardada.");
+          store.set("saluxJWTokenTime", expirationTime);
+          store.set("saluxJWToken", token);
+        }
+      }
+      return "ok";
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
 }
 
+async function pacregSalux(npac, store) {
+  try {
+    console.log(npac);
+    const options = {
+      headers: { Authorization: `Bearer ${store.get("saluxJWToken")}` },
+      params: { cpf: "", codigo: 40 },
+    };
+    const responseAPI = await axios.get(
+      endpoint + "atendimento/pacientes",
+      options
+    );
+    let response = {};
+    response.pacreg = 40;
+    response.nome = responseAPI.data[0].NomeCompleto.trim();
+    response.data_nascimento = responseAPI.data[0].DataNascimento;
+    response.cpf = responseAPI.data[0].Cpf;
+    if (responseAPI.data[0].Responsaveis[0]) {
+      response.cpf_proprio = "T";
+      response.cpf = responseAPI.data[0].Responsaveis[0].Cpf;
+    } else {
+      response.cpf_proprio = null;
+    }
+    response.email = responseAPI.data[0].Email;
+
+    response.data_nascimento = response.data_nascimento.split("T")[0];
+
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+}
 module.exports = {
   getdata,
   pacreg,
   getData_tasy,
   testDBConnection,
+  pacregSalux,
 };

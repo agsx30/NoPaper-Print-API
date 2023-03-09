@@ -62,7 +62,7 @@ function setupMainWindow() {
     mainWindow.hide();
   });
 
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 }
 
 function setupTray() {
@@ -164,23 +164,80 @@ app.on("ready", () => {
   }
 
   express.post("/pdf", async (req, res) => {
-    await addToQueue(() => {
-      if (store.get("login")) {
-        loading(mainWindow);
-        mainWindow.webContents.removeAllListeners("did-finish-load");
-        getData(
-          req,
-          res,
-          mainWindow.webContents,
-          store,
-          client,
-          index,
-          dialog,
-          mainWindow
-        );
+    await addToQueue(async () => {
+      if (client === "Salux") {
+        const currentTime = Math.floor(Date.now() / 1000); // convert to seconds
+        if (
+          store.get("saluxJWTokenTime") &&
+          store.get("saluxJWTokenTime") < currentTime
+        ) {
+          console.log("TOKEN EXPIRADA");
+          response = await db.testDBConnection(client, store);
+          if (response === "ok") {
+            if (store.get("login")) {
+              loading(mainWindow);
+              mainWindow.webContents.removeAllListeners("did-finish-load");
+              getData(
+                req,
+                res,
+                mainWindow.webContents,
+                store,
+                client,
+                index,
+                dialog,
+                mainWindow
+              );
+            } else {
+              res.writeHead(404);
+              res.end();
+            }
+          } else {
+            dialog.showMessageBox({
+              message: "Erro na atualização da Token para a API SALUX.",
+              buttons: ["OK"],
+            });
+
+            logout(mainWindow, trayMenu, store);
+            res.writeHead(404);
+            res.end();
+          }
+        } else if (store.get("saluxJWTokenTime")) {
+          if (store.get("login")) {
+            loading(mainWindow);
+            mainWindow.webContents.removeAllListeners("did-finish-load");
+            getData(
+              req,
+              res,
+              mainWindow.webContents,
+              store,
+              client,
+              index,
+              dialog,
+              mainWindow
+            );
+          } else {
+            res.writeHead(404);
+            res.end();
+          }
+        }
       } else {
-        res.writeHead(404);
-        res.end();
+        if (store.get("login")) {
+          loading(mainWindow);
+          mainWindow.webContents.removeAllListeners("did-finish-load");
+          getData(
+            req,
+            res,
+            mainWindow.webContents,
+            store,
+            client,
+            index,
+            dialog,
+            mainWindow
+          );
+        } else {
+          res.writeHead(404);
+          res.end();
+        }
       }
     });
   });
@@ -308,7 +365,7 @@ ipcMain.on("login", async (e, data) => {
             });
             if (resUser.status === 200) {
               try {
-                res = await db.testDBConnection(client);
+                res = await db.testDBConnection(client, store);
                 if (res === "ok") {
                   store.set("login", resLogin.data);
                   store.set(
@@ -555,6 +612,32 @@ ipcMain.on("dbConnect", async (e, info) => {
         //   "Paciente não encontrado na base de dados."
         // );
         // index(mainWindow, store);
+      }
+    } else if (client === "Salux") {
+      try {
+        formForData.parms = await db.pacregSalux(formForData.pacReg, store);
+        if (
+          formForData.parms.cpf &&
+          formForData.parms.data_nascimento &&
+          formForData.parms.nome
+        ) {
+          formForData.channel_name = process.env.CHANNEL_NAME;
+          mainWindow.webContents.on("did-finish-load", function formSender() {
+            mainWindow.webContents.send("form", formForData);
+          });
+          mainWindow.loadFile(path.join(__dirname, "./views/data.html"));
+          mainWindow.setSize(800, 750);
+          mainWindow.center();
+          mainWindow.show();
+        } else {
+          dialog.showErrorBox(
+            "Erro",
+            "Paciente sem cadastro completo na base de dados."
+          );
+          index(mainWindow, store);
+        }
+      } catch (error) {
+        console.log(error);
       }
     }
   } catch (error) {
