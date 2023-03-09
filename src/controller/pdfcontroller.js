@@ -19,7 +19,6 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
   }
 
   function b64DecodeUnicode(str) {
-    // Going backwards: from bytestream, to percent-encoding, to original string.
     return decodeURIComponent(
       atob(str)
         .split("")
@@ -119,6 +118,12 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
           var files = store.get("files");
           type = filename;
           num = store.get("files").length;
+          if (client === "Salux") {
+            filename =
+              Buffer.from(filename.split(".pdf")[0], "base64").toString(
+                "latin1"
+              ) + ".pdf";
+          }
           files.push({
             filename,
             file: store.get("files").length.toString() + ".pdf",
@@ -181,12 +186,17 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
             });
           } else if (client === "Tasy") {
             await getInfo();
-          } else {
+          } else if (client === "Salux") {
+            filename = filename.split(".pdf")[0];
+            let npac = filename.split(" - ")[1];
+
             filesView();
-            webContents.on("did-finish-load", function formSender() {
+            store.set("pacreg", npac);
+            webContents.on("did-finish-load", () => {
               webContents.send("files", {
                 files: store.get("files"),
                 records: store.get("record"),
+                pacreg: store.get("pacreg"),
                 client,
               });
             });
@@ -388,15 +398,90 @@ function getData24(
       }
     } else if (client === "Tasy") {
       getInfo();
-    } else {
-      filesView();
-      webContents.on("did-finish-load", function formSender() {
-        webContents.send("files", {
-          files: store.get("files"),
-          records: store.get("record"),
-          client,
-        });
-      });
+    } else if (client === "Salux") {
+      try {
+        if (filename.match(/\d+\.\d+\.pdf$/)) {
+          let osm1 = filename
+            .match(/\d+\.\d+\.pdf$/)[0]
+            .split(".pdf")[0]
+            .split(".")[0];
+          let osm2 = filename
+            .match(/\d+\.\d+\.pdf$/)[0]
+            .split(".pdf")[0]
+            .split(".")[1];
+
+          sql.pacregSalux(osm1, osm2, store).then((result) => {
+            if (result) {
+              filesView();
+              store.set("pacreg", result.pacreg);
+              store.set("convenio", result.convenio);
+              store.set("email_med", result.email_med);
+              webContents.on("did-finish-load", () => {
+                webContents.send("files", {
+                  files: store.get("files"),
+                  records: store.get("record"),
+                  pacreg: store.get("pacreg"),
+                  client,
+                });
+              });
+            } else {
+              dialog.showErrorBox(
+                "Erro",
+                "Erro na consulta da Ordem de Servico na Base de Dados"
+              );
+              index(window, store);
+            }
+          });
+        } else if (filename.match(/O\.S\. \d+\.\d+/)) {
+          let osm1 = filename
+            .match(/O\.S\. \d+\.\d+/)[0]
+            .split("O.S. ")[1]
+            .split(".")[0];
+          let osm2 = filename
+            .match(/O\.S\. \d+\.\d+/)[0]
+            .split("O.S. ")[1]
+            .split(".")[1];
+          sql.pacregSalux(osm1, osm2, store).then((result) => {
+            if (result) {
+              filesView();
+              store.set("pacreg", result.pacreg);
+              store.set("convenio", result.convenio);
+              store.set("email_med", result.email_med);
+              webContents.on("did-finish-load", () => {
+                webContents.send("files", {
+                  files: store.get("files"),
+                  records: store.get("record"),
+                  pacreg: store.get("pacreg"),
+                  client,
+                });
+              });
+            } else {
+              dialog.showErrorBox(
+                "Erro",
+                "Erro na consulta da Ordem de Servico na Base de Dados"
+              );
+              index(window, store);
+            }
+          });
+        } else {
+          filesView();
+          webContents.on("did-finish-load", () => {
+            webContents.send("files", {
+              files: store.get("files"),
+              records: store.get("record"),
+              pacreg: store.get("pacreg"),
+              client,
+            });
+          });
+        }
+      } catch (error) {
+        console.log(error);
+        dialog.showErrorBox(
+          "Erro",
+          "Erro na consulta da Ordem de Servico na Base de Dados"
+        );
+        index(window, store);
+      }
     }
   } catch (error) {
     console.log(error);
