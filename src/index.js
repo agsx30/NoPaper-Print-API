@@ -1,5 +1,4 @@
 require("dotenv").config();
-const https = require("https");
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog } = require("electron");
 const axios = require("axios");
 const fs = require("fs");
@@ -10,6 +9,7 @@ const Store = require("electron-store");
 const db = require("./db/dbconnect");
 const multer = require("multer");
 const upload = multer();
+const { autoUpdater, AppUpdater } = require("electron-updater");
 
 const { app: express, server } = require("./server");
 const { getData, getData24 } = require("./controller/pdfcontroller");
@@ -26,16 +26,20 @@ const appToken = "XNQIQRI1SVT";
 
 const store = new Store();
 var form = new FormData();
+const gotTheLock = app.requestSingleInstanceLock();
 
 var client = process.env.CLIENT;
 var mainWindow;
 var tray;
 
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.autoRunAppAfterInstall = true;
+
 function setupMainWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 500,
-    alwaysOnTop: true,
     simpleFullscreen: true,
     show: true,
     autoHideMenuBar: true,
@@ -49,6 +53,8 @@ function setupMainWindow() {
     },
   });
 
+  mainWindow.setTitle(`NoPaper API v${app.getVersion()}`);
+
   mainWindow.loadFile(path.join(__dirname, "./views/login.html"));
 
   mainWindow.on("minimize", function (event) {
@@ -56,7 +62,7 @@ function setupMainWindow() {
     mainWindow.hide();
   });
 
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 }
 
 function setupTray() {
@@ -103,7 +109,20 @@ if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
-app.on("ready", async () => {
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
+app.on("ready", () => {
+  autoUpdater.checkForUpdates();
   config();
   logoutButton = trayMenu.getMenuItemById("logout");
   logoutButton.enabled = false;
@@ -122,14 +141,8 @@ app.on("ready", async () => {
 
     return false;
   });
-  try {
-    server.listen(express.get("port"));
-  } catch (error) {
-    dialog.showMessageBox({
-      message: error.message,
-      buttons: ["OK"],
-    });
-  }
+
+  server.listen(express.get("port"));
 
   let queue = [];
   let running = false;
@@ -151,23 +164,80 @@ app.on("ready", async () => {
   }
 
   express.post("/pdf", async (req, res) => {
-    await addToQueue(() => {
-      if (store.get("login")) {
-        loading(mainWindow);
-        mainWindow.webContents.removeAllListeners("did-finish-load");
-        getData(
-          req,
-          res,
-          mainWindow.webContents,
-          store,
-          client,
-          index,
-          dialog,
-          mainWindow
-        );
+    await addToQueue(async () => {
+      if (client === "Salux") {
+        const currentTime = Math.floor(Date.now() / 1000); // convert to seconds
+        if (
+          store.get("saluxJWTokenTime") &&
+          store.get("saluxJWTokenTime") < currentTime
+        ) {
+          console.log("TOKEN EXPIRADA");
+          response = await db.testDBConnection(client, store);
+          if (response === "ok") {
+            if (store.get("login")) {
+              loading(mainWindow);
+              mainWindow.webContents.removeAllListeners("did-finish-load");
+              getData(
+                req,
+                res,
+                mainWindow.webContents,
+                store,
+                client,
+                index,
+                dialog,
+                mainWindow
+              );
+            } else {
+              res.writeHead(404);
+              res.end();
+            }
+          } else {
+            dialog.showMessageBox({
+              message: "Erro na atualização da Token para a API SALUX.",
+              buttons: ["OK"],
+            });
+
+            logout(mainWindow, trayMenu, store);
+            res.writeHead(404);
+            res.end();
+          }
+        } else if (store.get("saluxJWTokenTime")) {
+          if (store.get("login")) {
+            loading(mainWindow);
+            mainWindow.webContents.removeAllListeners("did-finish-load");
+            getData(
+              req,
+              res,
+              mainWindow.webContents,
+              store,
+              client,
+              index,
+              dialog,
+              mainWindow
+            );
+          } else {
+            res.writeHead(404);
+            res.end();
+          }
+        }
       } else {
-        res.writeHead(404);
-        res.end();
+        if (store.get("login")) {
+          loading(mainWindow);
+          mainWindow.webContents.removeAllListeners("did-finish-load");
+          getData(
+            req,
+            res,
+            mainWindow.webContents,
+            store,
+            client,
+            index,
+            dialog,
+            mainWindow
+          );
+        } else {
+          res.writeHead(404);
+          res.end();
+        }
       }
     });
   });
@@ -197,6 +267,36 @@ app.on("ready", async () => {
   express.get("/return", (req, res) => {
     res.send("<script>window.close();</script > ");
   });
+});
+
+autoUpdater.on("update-available", () => {
+  const response = dialog.showMessageBoxSync({
+    type: "question",
+    buttons: ["Baixar", "Agora não"],
+    defaultId: 0,
+    message:
+      "Uma nova versão do aplicativo está disponível, gostaria de baixar agora?",
+  });
+
+  if (response === 0) {
+    autoUpdater.downloadUpdate();
+  }
+});
+
+autoUpdater.on("update-downloaded", () => {
+  const response = dialog.showMessageBoxSync({
+    type: "question",
+    buttons: ["Atualizar"],
+    defaultId: 0,
+    message: "Seu aplicativo será atualizado agora.",
+  });
+  if (response === 0) {
+    autoUpdater.quitAndInstall();
+  }
+});
+
+autoUpdater.on("error", (error) => {
+  dialog.showMessageBox(mainWindow, error);
 });
 
 ipcMain.on("index", () => {
@@ -265,7 +365,7 @@ ipcMain.on("login", async (e, data) => {
             });
             if (resUser.status === 200) {
               try {
-                res = await db.testDBConnection(client);
+                res = await db.testDBConnection(client, store);
                 if (res === "ok") {
                   store.set("login", resLogin.data);
                   store.set(
@@ -513,6 +613,32 @@ ipcMain.on("dbConnect", async (e, info) => {
         // );
         // index(mainWindow, store);
       }
+    } else if (client === "Salux") {
+      try {
+        formForData.parms = await db.pacregSalux(formForData.pacReg, store);
+        if (
+          formForData.parms.cpf &&
+          formForData.parms.data_nascimento &&
+          formForData.parms.nome
+        ) {
+          formForData.channel_name = process.env.CHANNEL_NAME;
+          mainWindow.webContents.on("did-finish-load", function formSender() {
+            mainWindow.webContents.send("form", formForData);
+          });
+          mainWindow.loadFile(path.join(__dirname, "./views/data.html"));
+          mainWindow.setSize(800, 750);
+          mainWindow.center();
+          mainWindow.show();
+        } else {
+          dialog.showErrorBox(
+            "Erro",
+            "Paciente sem cadastro completo na base de dados."
+          );
+          index(mainWindow, store);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     }
   } catch (error) {
     console.error(error);
@@ -540,6 +666,5 @@ app.on("quit", () => {
   //   fs.unlinkSync(path.join(__dirname, `./file/${current.file}`));
   // });
   store.set("files", []);
-
   server.close();
 });
