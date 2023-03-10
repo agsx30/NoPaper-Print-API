@@ -167,20 +167,26 @@ async function pacregSalux(npac, store) {
     console.log(npac);
     const options = {
       headers: { Authorization: `Bearer ${store.get("saluxJWToken")}` },
-      params: { cpf: "", codigo: 40 },
+      params: { cpf: "", codigo: npac },
     };
     const responseAPI = await axios.get(
       endpoint + "atendimento/pacientes",
       options
     );
     let response = {};
-    response.pacreg = 40;
+    response.pacreg = npac;
     response.nome = responseAPI.data[0].NomeCompleto.trim();
     response.data_nascimento = responseAPI.data[0].DataNascimento;
     response.cpf = responseAPI.data[0].Cpf;
     if (responseAPI.data[0].Responsaveis[0]) {
-      response.cpf_proprio = "T";
-      response.cpf = responseAPI.data[0].Responsaveis[0].Cpf;
+      if (
+        responseAPI.data[0].Responsaveis[0].Nome !==
+        responseAPI.data[0].NomeCompleto
+      ) {
+        response.cpf_proprio = "T";
+        response.cpf = responseAPI.data[0].Responsaveis[0].Cpf;
+      } else {
+      }
     } else {
       response.cpf_proprio = null;
     }
