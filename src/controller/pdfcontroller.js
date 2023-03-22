@@ -64,6 +64,11 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
       })
       .catch((error) => {
         console.log(error);
+        dialog.showErrorBox(
+          "Erro",
+          "Erro na digitalização no documento com tesseract."
+        );
+        index(window, store);
       });
   }
 
@@ -288,6 +293,11 @@ function getData24(
       })
       .catch((error) => {
         console.log(error);
+        dialog.showErrorBox(
+          "Erro",
+          "Erro na digitalização no documento com tesseract."
+        );
+        index(window, store);
       });
   }
 
