@@ -178,6 +178,10 @@ async function pacregSalux(npac, store) {
     response.nome = responseAPI.data[0].NomeCompleto.trim();
     response.data_nascimento = responseAPI.data[0].DataNascimento;
     response.cpf = responseAPI.data[0].Cpf;
+    response.email = responseAPI.data[0].Email;
+    response.convenio =
+      responseAPI.data[0].UltimoAtendimento.NomeFantasiaConvenio;
+    response.email_med = responseAPI.data[0].UltimoAtendimento.Email;
     if (responseAPI.data[0].Responsaveis[0]) {
       if (
         responseAPI.data[0].Responsaveis[0].Nome !==
@@ -190,7 +194,6 @@ async function pacregSalux(npac, store) {
     } else {
       response.cpf_proprio = null;
     }
-    response.email = responseAPI.data[0].Email;
 
     response.data_nascimento = response.data_nascimento.split("T")[0];
 

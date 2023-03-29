@@ -195,6 +195,17 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
             filename = filename.split(".pdf")[0];
             let npac = filename.split(" - ")[1];
 
+            if ((pacreg = await sql.pacregSalux(npac, store))) {
+              store.set("convenio", pacreg.convenio);
+              store.set("email_med", pacreg.email_med);
+            } else {
+              dialog.showErrorBox(
+                "Erro",
+                "Erro na consulta do atendimento na API SALUX"
+              );
+              index(window, store);
+            }
+
             filesView();
             store.set("pacreg", npac);
             webContents.on("did-finish-load", () => {
