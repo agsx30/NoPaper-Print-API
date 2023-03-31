@@ -1,0 +1,5 @@
+PORT="3333"
+CHANNEL_NAME="tablet_teste"
+NOPAPER_URL="https://hslp.nopaper.link"
+CLIENT="Salux"
+SALUX_ENDPOINT="https://webcloud.salux.com.br:8089/API_SKYMED/v1/"

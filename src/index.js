@@ -61,8 +61,6 @@ function setupMainWindow() {
     event.preventDefault();
     mainWindow.hide();
   });
-
-  
 }
 
 function setupTray() {
@@ -426,6 +424,9 @@ ipcMain.on("confirm", async (e, formIn) => {
 
   params.convenio = store.get("convenio");
   params.med_email = store.get("email_med");
+  if (store.get("atendimento")) {
+    params.numero_atendimento = store.get("atendimento");
+  }
   console.log(params);
 
   if (formIn.forms) {
@@ -442,8 +443,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        url: formsUrl,
-        // url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
+        // url: formsUrl,
+        url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
         data: form,
       });
 
@@ -470,8 +471,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        url: docsUrl,
-        // url: "https://webhook.site/20d06909-c6ad-4852-aa71-aa42a8be10ed",
+        // url: docsUrl,
+        url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
         data: form,
       });
 

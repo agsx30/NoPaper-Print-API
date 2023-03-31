@@ -151,6 +151,7 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
                 store.set("pacreg", pacreg.pacreg);
                 store.set("convenio", pacreg.convenio);
                 store.set("email_med", pacreg.email_med);
+                store.set("atendimento", `${osm1}${osm2}`);
               } else {
                 dialog.showErrorBox(
                   "Erro",
@@ -172,6 +173,7 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
                 store.set("pacreg", pacreg.pacreg);
                 store.set("convenio", pacreg.convenio);
                 store.set("email_med", pacreg.email_med);
+                store.set("atendimento", `${osm1}${osm2}`);
               } else {
                 dialog.showErrorBox(
                   "Erro",
@@ -351,6 +353,7 @@ function getData24(
               store.set("pacreg", result.pacreg);
               store.set("convenio", result.convenio);
               store.set("email_med", result.email_med);
+              store.set("atendimento", `${osm1}${osm2}`);
               webContents.on("did-finish-load", () => {
                 webContents.send("files", {
                   files: store.get("files"),
@@ -382,6 +385,7 @@ function getData24(
               store.set("pacreg", result.pacreg);
               store.set("convenio", result.convenio);
               store.set("email_med", result.email_med);
+              store.set("atendimento", `${osm1}${osm2}`);
               webContents.on("did-finish-load", () => {
                 webContents.send("files", {
                   files: store.get("files"),
