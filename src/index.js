@@ -443,8 +443,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        // url: formsUrl,
-        url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
+        url: formsUrl,
+        // url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
         data: form,
       });
 
@@ -471,8 +471,8 @@ ipcMain.on("confirm", async (e, formIn) => {
           Authorization: "Bearer " + store.get("login").access_token,
         },
         method: "post",
-        // url: docsUrl,
-        url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
+        url: docsUrl,
+        // url: "https://webhook.site/f918cbbd-4cd0-4a33-9996-89488c4fad78",
         data: form,
       });
 

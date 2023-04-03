@@ -77,14 +77,12 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
       /^multipart\/.+?(?:; boundary=(?:(?:"(.+)")|(?:([^\s]+))))$/i;
     let m;
     var filename = "";
-    // var filename2 = "";
     var saveFile = fs.createWriteStream(
       "./" + store.get("files").length.toString() + ".pdf"
     );
     function writer(data) {
       saveFile.write(data);
     }
-    // const form = {};
     if (
       req.method === "POST" &&
       req.headers["content-type"] &&
@@ -131,7 +129,7 @@ function getData(req, res, webContents, store, client, index, dialog, window) {
           }
           files.push({
             filename,
-            file: store.get("files").length.toString() + ".pdf",
+            file: num.toString() + ".pdf",
           });
           store.set("files", files);
           console.log("Arquivo montado e sendo enviado...");
