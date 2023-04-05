@@ -1,6 +1,10 @@
-O aplicativo só deve ser aberto uma vez, caso ele seja aberto mais de uma vez haverá um erro com a porta, feche todos as instancias do executável e abra o executável novamente.
+O aplicativo só deve ser aberto uma vez, caso ele seja aberto mais de uma vez haverá um erro e sua segunda instancia será fechada automaticamente.
 
 Configurando o .env:
+
+A pasta de instalação padrão é "c:/arquivos e programas/NoPaper Print API", instale na pasta "c:/arquivos e programas/NoPaper/NoPaper Print API" ao invés da padrão, a pasta "c:/arquivos e programas/NoPaper" deve conter a pasta do aplicativo e o documento .env.
+
+EM CASO DE USUÁRIO USAR MS SQL SERVER:
 
 _SQL_USER=""_
 
@@ -21,6 +25,28 @@ A chave SQL_SERVER deve ser o nome do server MS SQL SERVER que contém a databas
 _SQL_PORT=""_
 
 A chave SQL_PORT deve ser a porta do server MS SQL SERVER, exemplo: SQL_DATABASE:"1244".
+
+EM CASO DE USUÁRIO USAR ORACLE:
+
+ORACLE_USER=""
+
+A chave ORACLE_USER deve ser o usuário habilitado no Oracle para acessar a database que contém as informações dos pacientes, exemplo: ORACLE_USER:"usuario_teste".
+
+ORACLE_USER_PASSWORD=""
+
+A chave ORACLE_USER_PASSWORD deve ser a senha do usuário habilitado no Oracle para acessar a database que contém as informações dos pacientes, exemplo: ORACLE_USER_PASSWORD:"senha_exemplo_123".
+
+ORACLE_HOST_NAME=""
+
+A chave ORACLE_HOST_NAME deve ser o nome do servidor Oracle que contém a database que contém as informações dos pacientes, exemplo: ORACLE_HOST_NAME:"nome_servidor_oracle".
+
+ORACLE_PORT=""
+
+A chave ORACLE_PORT deve ser a porta do servidor Oracle, exemplo: ORACLE_PORT:"1521".
+
+ORACLE_SERVICE_NAME=""
+
+A chave ORACLE_SERVICE_NAME deve ser o nome do serviço ou SID da database Oracle que contém as informações dos pacientes, exemplo: ORACLE_SERVICE_NAME:"nome_servico_database".
 
 _Port=""_
 
