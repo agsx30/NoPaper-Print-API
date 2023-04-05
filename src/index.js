@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: "../.env" });
 const { app, BrowserWindow, Tray, Menu, ipcMain, dialog } = require("electron");
 const axios = require("axios");
 const fs = require("fs");
@@ -9,7 +9,7 @@ const Store = require("electron-store");
 const db = require("./db/dbconnect");
 const multer = require("multer");
 const upload = multer();
-const { autoUpdater, AppUpdater } = require("electron-updater");
+const { autoUpdater } = require("electron-updater");
 
 const { app: express, server } = require("./server");
 const { getData, getData24 } = require("./controller/pdfcontroller");
