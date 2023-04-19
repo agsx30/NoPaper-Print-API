@@ -45,7 +45,7 @@ function setupMainWindow() {
     autoHideMenuBar: true,
     resizable: true,
     center: true,
-    icon: path.join(__dirname, "./assets/images/logo_quad.png"),
+    icon: path.join(__dirname, "./assets/images/logo.png"),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: true,
@@ -64,7 +64,7 @@ function setupMainWindow() {
 }
 
 function setupTray() {
-  tray = new Tray(path.join(__dirname, "./assets/images/logo_quad.png"));
+  tray = new Tray(path.join(__dirname, "./assets/images/logo.png"));
   trayMenu = Menu.buildFromTemplate([
     {
       label: "Abrir",
